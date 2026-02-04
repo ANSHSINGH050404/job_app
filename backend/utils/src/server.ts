@@ -1,7 +1,11 @@
 import dotenv from 'dotenv';
 import app from './app';
 import {v2 as cloudinary} from 'cloudinary';
+import { startSendMailConsumer } from './consumer';
 dotenv.config();
+
+
+startSendMailConsumer();
 
 
 cloudinary.config({

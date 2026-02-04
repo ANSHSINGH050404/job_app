@@ -6,6 +6,8 @@ import getBuffer from "../utils/buffer";
 import axios from "axios";
 import jwt from "jsonwebtoken";
 import { z } from "zod";
+import { forgotPasswordTemplate } from "../template";
+import { publishToTopic } from "../producer";
 
 const registerSchema = z.object({
   email: z.string().email("Invalid email format"),
@@ -152,3 +154,56 @@ export const loginUser = TryCatch(async (req, res) => {
 });
 
 
+export const forgotPassword = TryCatch(async (req, res, next) => {
+  // Implementation for forgot password
+
+   const {email} = req.body;
+
+   if (!email) {
+     throw new ErrorHandler(400, "Email is required");
+   }
+
+   const users = await sql`SELECT user_id, email FROM users WHERE email = ${email}`;
+
+   if (users.length === 0) {
+     
+
+    return res.json({
+      message:"If that email address is in our database, we will send you an email to reset your password.",
+    });
+
+
+   }
+
+   // Here you would typically generate a password reset token,
+    
+   const user = users[0];
+
+   const resetToken = jwt.sign(
+    {
+      id: user.user_id,
+    },
+    process.env.JWT_SECRET_KEY as string,
+    {
+      expiresIn: "10m",
+    },
+  );
+
+
+  const resetLink = `${process.env.FRONTEND_URL}/reset-password?token=${resetToken}`;
+
+
+  const message: any = {
+    to: email,
+    subject: "Password Reset Request",
+    html: forgotPasswordTemplate(resetLink),
+  };
+
+
+  publishToTopic("send-email", message);
+
+
+    res.json({
+      message:"If that email address is in our database, we will send you an email to reset your password.",
+    });
+});

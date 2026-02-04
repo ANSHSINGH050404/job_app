@@ -19,7 +19,8 @@ async function initDB() {
           CREATE TYPE user_role AS ENUM ('jobseeker', 'recruiter');
         END IF;
       END
-      $$;`;
+      $$;
+     `;
 
     await sql`
       CREATE TABLE IF NOT EXISTS users (
