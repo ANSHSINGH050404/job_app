@@ -200,7 +200,7 @@ export const forgotPassword = TryCatch(async (req, res, next) => {
   };
 
 
-  publishToTopic("send-email", message);
+  publishToTopic("send-mail", message);
 
 
     res.json({
