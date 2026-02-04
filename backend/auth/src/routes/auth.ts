@@ -8,6 +8,6 @@ import uploadFile from "../middleware/multer";
 const router = express.Router();
 
 
-router.post("/register",uploadFile, registerUser);
+router.post("/register", uploadFile, registerUser);
 
 export default router;

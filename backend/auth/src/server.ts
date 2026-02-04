@@ -1,14 +1,10 @@
 import app from "./app";
-import cors from "cors";
-import helmet from "helmet";
-import morgan from "morgan";
+import { sql } from "./utils/db";
 import dotenv from "dotenv";
 
-import { sql } from "./utils/db";
-
-import express from "express";
 dotenv.config();
-const PORT = process.env.PORT;
+
+const PORT = process.env.PORT || 3000;
 
 
 
@@ -36,12 +32,19 @@ async function initDB() {
         bio TEXT,
         resume VARCHAR(255),
         resume_public_id VARCHAR(255),
-        profile_picture VARCHAR(255),
+        profile_picture VARCHAR(255),   
         profile_picture_public_id VARCHAR(255),
         created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
         subscription TIMESTAMP  
       );
     `;
+
+    await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS resume VARCHAR(255);`;
+    await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS resume_public_id VARCHAR(255);`;
+    await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS profile_picture VARCHAR(255);`;
+    await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS profile_picture_public_id VARCHAR(255);`;
+    await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS bio TEXT;`;
+    await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS subscription TIMESTAMP;`;
 
     await sql`
 
