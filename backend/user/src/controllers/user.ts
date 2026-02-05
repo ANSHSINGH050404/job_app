@@ -23,11 +23,11 @@ export const getUserProfile = TryCatch(
       WHERE u.user_id = ${params.userId}
       GROUP BY u.user_id;
     `;
-    
+
     if (!users || users.length === 0) {
       return res.status(404).json({ message: "User not found" });
     }
-    
+
     const user = users[0];
     return res.status(200).json(user);
   },
@@ -39,27 +39,26 @@ export const updateUserProfile = TryCatch(
     if (!user) {
       return res.status(401).json({ message: "Unauthorized" });
     }
-    
+
     const { name, phone_number, bio } = req.body;
     const newName = name || user.name;
     const newPhoneNumber = phone_number || user.phone_number;
     const newBio = bio || user.bio;
-    
+
     const [updatedUser] = await sql`
       UPDATE users
       SET name = ${newName}, phone_number = ${newPhoneNumber}, bio = ${newBio}
       WHERE user_id = ${user.user_id}
       RETURNING user_id, name, email, phone_number, bio;
     `;
-    
+
     if (!updatedUser) {
       return res.status(404).json({ message: "User not found" });
     }
-    
+
     res.json({ message: "User profile updated successfully", updatedUser });
   },
 );
-
 
 export const updateUserProfilePicture = TryCatch(
   async (req: AuthenticatedRequest, res) => {
@@ -81,17 +80,28 @@ export const updateUserProfilePicture = TryCatch(
     }
 
     try {
+      const uploadUrl = `${process.env.UPLOAD_SERVICE}/upload`;
+      console.log("Uploading to:", uploadUrl);
+      console.log("Buffer content type:", typeof fileBuffer.content);
+      console.log("Buffer content length:", fileBuffer.content?.length);
+
       const { data: uploadResult } = await axios
-        .post(
-          `${process.env.UPLOAD_SERVICE}/upload`,
-          {
-            buffer: fileBuffer.content,
-            public_id: oldPublicId,
-          },
-        )
+        .post(uploadUrl, {
+          buffer: fileBuffer.content,
+          public_id: oldPublicId,
+        })
         .catch((error: any) => {
-          console.error("Error uploading file:", error && JSON.stringify(error, null, 2));
-          throw new Error("File upload failed");
+          console.error("Error uploading file - Full error:", {
+            message: error.message,
+            response: error.response?.data,
+            status: error.response?.status,
+            url: uploadUrl,
+          });
+          throw new Error(
+            error.response?.data?.error ||
+              error.message ||
+              "File upload failed",
+          );
         });
 
       const [updatedUser] = await sql`
@@ -108,7 +118,9 @@ export const updateUserProfilePicture = TryCatch(
       });
     } catch (error: any) {
       console.error("Error updating profile picture:", error);
-      return res.status(500).json({ error: error.message || "Failed to update profile picture" });
+      return res
+        .status(500)
+        .json({ error: error.message || "Failed to update profile picture" });
     }
-  }
+  },
 );
