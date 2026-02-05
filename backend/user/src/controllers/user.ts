@@ -60,6 +60,7 @@ export const updateUserProfile = TryCatch(
   },
 );
 
+
 export const updateUserProfilePicture = TryCatch(
   async (req: AuthenticatedRequest, res) => {
     const user = req.user;
@@ -121,6 +122,72 @@ export const updateUserProfilePicture = TryCatch(
       return res
         .status(500)
         .json({ error: error.message || "Failed to update profile picture" });
+    }
+  },
+);
+
+
+export const updateResume = TryCatch(
+  async (req: AuthenticatedRequest, res) => {
+    const user = req.user;
+    if (!user) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+
+    const file = req.file;
+    if (!file) {
+      return res.status(400).json({ message: "No pdf file uploaded" });
+    }
+
+    const oldPublicId = user.resume_public_id;
+    const fileBuffer = getBuffer(file);
+
+    if (!fileBuffer || !fileBuffer.content) {
+      return res.status(400).json({ message: "Invalid file" });
+    }
+
+    try {
+      const uploadUrl = `${process.env.UPLOAD_SERVICE}/upload`;
+      console.log("Uploading to:", uploadUrl);
+      console.log("Buffer content type:", typeof fileBuffer.content);
+      console.log("Buffer content length:", fileBuffer.content?.length);
+
+      const { data: uploadResult } = await axios
+        .post(uploadUrl, {
+          buffer: fileBuffer.content,
+          public_id: oldPublicId,
+        })
+        .catch((error: any) => {
+          console.error("Error uploading file - Full error:", {
+            message: error.message,
+            response: error.response?.data,
+            status: error.response?.status,
+            url: uploadUrl,
+          });
+          throw new Error(
+            error.response?.data?.error ||
+              error.message ||
+              "File upload failed",
+          );
+        });
+
+      const [updatedUser] = await sql`
+        UPDATE users
+        SET resume = ${uploadResult.url}, 
+            resume_public_id = ${uploadResult.public_id}
+        WHERE user_id = ${user.user_id}
+        RETURNING user_id, name, resume, resume_public_id;
+      `;
+
+      res.json({
+        message: "Resume updated successfully",
+        updatedUser,
+      });
+    } catch (error: any) {
+      console.error("Error updating resume:", error);
+      return res
+        .status(500)
+        .json({ error: error.message || "Failed to update resume" });
     }
   },
 );

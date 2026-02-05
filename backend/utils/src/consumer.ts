@@ -17,14 +17,14 @@ export const startSendMailConsumer = async () => {
 
     await consumer.subscribe({ topic: topicName, fromBeginning: false });
 
-    console.log("Kafka service consumer,listning for sending mail");
+    // console.log("Kafka service consumer,listning for sending mail");
 
     await consumer.run({
       eachMessage: async ({ topic, partition, message }) => {
         try {
-          console.log(
-            `Topic is =[${topic}] Partition is =:[${partition}]:}`,message.value?.toString(),
-          );
+          // console.log(
+          //   `Topic is =[${topic}] Partition is =:[${partition}]:}`,message.value?.toString(),
+          // );
 
           const { to, subject, html } = JSON.parse(
             message.value?.toString() || "{}",
