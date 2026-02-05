@@ -22,6 +22,10 @@ export const startSendMailConsumer = async () => {
     await consumer.run({
       eachMessage: async ({ topic, partition, message }) => {
         try {
+          console.log(
+            `Topic is =[${topic}] Partition is =:[${partition}]:}`,message.value?.toString(),
+          );
+
           const { to, subject, html } = JSON.parse(
             message.value?.toString() || "{}",
           );

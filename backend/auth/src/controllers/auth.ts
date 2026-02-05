@@ -8,14 +8,24 @@ import jwt from "jsonwebtoken";
 import { z } from "zod";
 import { forgotPasswordTemplate } from "../template";
 import { publishToTopic } from "../producer";
+import { redisClient } from "../server";
 
 const registerSchema = z.object({
   email: z.string().email("Invalid email format"),
-  name: z.string().min(2, "Name must be at least 2 characters").max(100, "Name must be less than 100 characters"),
-  password: z.string().min(6, "Password must be at least 6 characters").max(255, "Password must be less than 255 characters"),
-  phone_number: z.string().min(10, "Phone number must be at least 10 characters").max(15, "Phone number must be less than 15 characters"),
+  name: z
+    .string()
+    .min(2, "Name must be at least 2 characters")
+    .max(100, "Name must be less than 100 characters"),
+  password: z
+    .string()
+    .min(6, "Password must be at least 6 characters")
+    .max(255, "Password must be less than 255 characters"),
+  phone_number: z
+    .string()
+    .min(10, "Phone number must be at least 10 characters")
+    .max(15, "Phone number must be less than 15 characters"),
   role: z.enum(["jobseeker", "recruiter"]),
-  bio: z.string().max(1000, "Bio must be less than 1000 characters").optional()
+  bio: z.string().max(1000, "Bio must be less than 1000 characters").optional(),
 });
 
 const loginSchema = z.object({
@@ -27,11 +37,14 @@ export const registerUser = TryCatch(async (req, res) => {
   const validationResult = registerSchema.safeParse(req.body);
 
   if (!validationResult.success) {
-    const errorMessages = validationResult.error.issues.map(err => `${err.path.join(".")}: ${err.message}`).join(", ");
+    const errorMessages = validationResult.error.issues
+      .map((err) => `${err.path.join(".")}: ${err.message}`)
+      .join(", ");
     throw new ErrorHandler(400, `Validation failed: ${errorMessages}`);
   }
 
-  const { email, name, password, phone_number, role, bio } = validationResult.data;
+  const { email, name, password, phone_number, role, bio } =
+    validationResult.data;
 
   const existingUser =
     await sql`SELECT user_id FROM users WHERE email = ${email}`;
@@ -103,7 +116,9 @@ export const loginUser = TryCatch(async (req, res) => {
   const validationResult = loginSchema.safeParse(req.body);
 
   if (!validationResult.success) {
-    const errorMessages = validationResult.error.issues.map(err => `${err.path.join(".")}: ${err.message}`).join(", ");
+    const errorMessages = validationResult.error.issues
+      .map((err) => `${err.path.join(".")}: ${err.message}`)
+      .join(", ");
     throw new ErrorHandler(400, `Validation failed: ${errorMessages}`);
   }
 
@@ -153,45 +168,50 @@ export const loginUser = TryCatch(async (req, res) => {
   });
 });
 
-
 export const forgotPassword = TryCatch(async (req, res, next) => {
   // Implementation for forgot password
 
-   const {email} = req.body;
+  const { email } = req.body;
 
-   if (!email) {
-     throw new ErrorHandler(400, "Email is required");
-   }
+  if (!email) {
+    throw new ErrorHandler(400, "Email is required");
+  }
 
-   const users = await sql`SELECT user_id, email FROM users WHERE email = ${email}`;
+  const users =
+    await sql`SELECT user_id, email FROM users WHERE email = ${email}`;
 
-   if (users.length === 0) {
-     
+  if (users.length === 0) {
 
+    console.log("User not found");
     return res.json({
-      message:"If that email address is in our database, we will send you an email to reset your password.",
+      message:
+        "If that email address is in our database, we will send you an email to reset your password.",
     });
+  }
 
+  // Here you would typically generate a password reset token,
 
-   }
+  const user = users[0];
 
-   // Here you would typically generate a password reset token,
-    
-   const user = users[0];
-
-   const resetToken = jwt.sign(
-    {
-      id: user.user_id,
-    },
-    process.env.JWT_SECRET_KEY as string,
-    {
-      expiresIn: "10m",
-    },
-  );
-
+    const resetToken = jwt.sign(
+      {
+        id: user.user_id,
+        type: "reset",
+        email: user.email,
+      },
+      process.env.JWT_SECRET_KEY as string,
+      {
+        expiresIn: "10m",
+      },
+    );
 
   const resetLink = `${process.env.FRONTEND_URL}/reset-password?token=${resetToken}`;
 
+  await redisClient.set(`forgot:${email}`, resetToken, {
+    EX: 900,
+  });
+
+  console.log("Token stored in Redis");
 
   const message: any = {
     to: email,
@@ -199,11 +219,44 @@ export const forgotPassword = TryCatch(async (req, res, next) => {
     html: forgotPasswordTemplate(resetLink),
   };
 
-
   publishToTopic("send-mail", message);
 
-
-    res.json({
-      message:"If that email address is in our database, we will send you an email to reset your password.",
-    });
+  res.json({
+    message:
+      "If that email address is in our database, we will send you an email to reset your password.",
+  });
 });
+
+
+
+export const resetPassword = TryCatch(async (req, res, next) => {
+  const { token } = req.params;
+  const { password } = req.body;
+  let decoded: any;
+  try {
+    decoded = jwt.verify(token, process.env.JWT_SECRET_KEY as string);
+  } catch (error) {
+    throw new ErrorHandler(400, "Invalid or expired token");
+  }
+  if (!decoded.type || decoded.type !== "reset") {
+    throw new ErrorHandler(400, "Invalid token type");
+  }
+  const email = decoded.email;
+  const storedToken = await redisClient.get(`forgot:${email}`);
+  console.log("Retrieved token from Redis:", storedToken);
+  if (storedToken !== token) {
+    throw new ErrorHandler(400, "Invalid or expired token");
+  }
+  const users = await sql`SELECT user_id FROM users WHERE email = ${email}`;
+  if (users.length === 0) {
+    throw new ErrorHandler(404, "User not found");
+  }
+  const user = users[0];
+  const hashedPassword = await bcrypt.hash(password, 10);
+  await sql`UPDATE users SET password = ${hashedPassword} WHERE user_id = ${user.user_id}`;
+  await redisClient.del(`forgot:${email}`);
+  res.json({
+    message: "Password has been reset successfully",
+  });
+});
+

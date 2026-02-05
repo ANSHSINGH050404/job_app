@@ -1,15 +1,41 @@
 import app from "./app";
 import { sql } from "./utils/db";
 import dotenv from "dotenv";
-
+import { createClient } from "redis";
+import { disconnectKafka } from "./producer";
 dotenv.config();
 
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 5000;
 
 
+//Redis client setup
+export const redisClient = createClient({
+  url: process.env.REDIS_URL,
+
+});
+
+redisClient.connect().then(() => {
+  console.log("✅Connected to Redis");
+}).catch((err) => {
+  console.error("Could not connect to Redis", err);
+});
+
+// Handle shutdown signals for clean disconnect
+process.on('SIGINT', async () => {
+  console.log('Disconnecting from Kafka and Redis...');
+  await disconnectKafka();
+  await redisClient.quit();
+  process.exit(0);
+});
+
+process.on('SIGTERM', async () => {
+  console.log('Disconnecting from Kafka and Redis...');
+  await disconnectKafka();
+  await redisClient.quit();
+  process.exit(0);
+});
 
 //db schema
-
 async function initDB() {
   try {
     await sql`
