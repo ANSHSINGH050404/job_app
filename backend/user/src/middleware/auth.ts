@@ -48,7 +48,7 @@ export const isAuth = async (
     // Verify token
     const decodedPayload = jwt.verify(token, jwtSecret) as JwtPayload;
 
-    if (!decodedPayload || !decodedPayload.user_id) {
+    if (!decodedPayload || !decodedPayload.id) {
       return res.status(401).json({ message: 'Invalid token' });
     }
 
@@ -61,7 +61,7 @@ export const isAuth = async (
       FROM users u
       LEFT JOIN user_skills us ON u.user_id = us.user_id
       LEFT JOIN skills s ON us.skill_id = s.skill_id
-      WHERE u.user_id = ${decodedPayload.user_id}
+      WHERE u.user_id = ${decodedPayload.id}
       GROUP BY u.user_id;
     `;
 
