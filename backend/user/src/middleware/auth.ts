@@ -2,6 +2,7 @@ import { NextFunction, Request, Response } from "express";
 import jwt, { JwtPayload } from "jsonwebtoken";
 import { sql } from "../utils/db";
 
+
 interface User {
   user_id: string;
   name: string;
@@ -30,16 +31,19 @@ export const isAuth = async (req: AuthenticatedRequest, res: Response, next: Nex
         }
         
         const token = authHeader.split(' ')[1];
+        console.log('Extracted Token:', token);
         if (!token) {
             return res.status(401).json({ message: 'Authentication Token Missing' });
         }
         
         const decodedPayload = jwt.verify(
             token, 
-            process.env.JWT_SECRET as string
+            process.env.JWT_SECRET_KEY as string
         ) as JwtPayload;
+        console.log('Decoded JWT Payload:', decodedPayload);
         
-        if (!decodedPayload || !decodedPayload.user_id) {
+        console.log('Decoded JWT Payload:', decodedPayload);
+        if (!decodedPayload || !decodedPayload.id) {
             return res.status(401).json({ message: 'Invalid Token' });
         }
         
@@ -51,13 +55,16 @@ export const isAuth = async (req: AuthenticatedRequest, res: Response, next: Nex
             FROM users u
             LEFT JOIN user_skills us ON u.user_id = us.user_id
             LEFT JOIN skills s ON us.skill_id = s.skill_id
-            WHERE u.user_id = ${decodedPayload.user_id}
+            WHERE u.user_id = ${decodedPayload.id}
             GROUP BY u.user_id;
         `;
         
         if (!users || users.length === 0) {
             return res.status(401).json({ message: 'User associated with token not found' });
         }
+
+        console.log(users);
+        
         
         const user = users[0] as User;
         user.skills = user.skills || [];
@@ -76,3 +83,5 @@ export const isAuth = async (req: AuthenticatedRequest, res: Response, next: Nex
         return res.status(500).json({ message: 'Internal Server Error' });
     }
 }
+
+
