@@ -60,44 +60,55 @@ export const updateUserProfile = TryCatch(
   },
 );
 
+
 export const updateUserProfilePicture = TryCatch(
   async (req: AuthenticatedRequest, res) => {
     const user = req.user;
     if (!user) {
       return res.status(401).json({ message: "Unauthorized" });
     }
-    
+
     const file = req.file;
     if (!file) {
       return res.status(400).json({ message: "No file uploaded" });
     }
-    
+
     const oldPublicId = user.profile_picture_public_id;
     const fileBuffer = getBuffer(file);
-    
+
     if (!fileBuffer || !fileBuffer.content) {
       return res.status(400).json({ message: "Invalid file" });
     }
-    
-    const { data: uploadResult } = await axios.post(
-      `${process.env.UPLOAD_SERVICE}/upload`,
-      {
-        buffer: fileBuffer.content,
-        public_id: oldPublicId,
-      },
-    );
-    
-    const [updatedUser] = await sql`
-      UPDATE users
-      SET profile_picture = ${uploadResult.url}, 
-          profile_picture_public_id = ${uploadResult.public_id}
-      WHERE user_id = ${user.user_id}
-      RETURNING user_id, name, email, phone_number, bio, profile_picture, profile_picture_public_id;
-    `;
-    
-    res.json({
-      message: "Profile picture updated successfully",
-      updatedUser,
-    });
+
+    try {
+      const { data: uploadResult } = await axios
+        .post(
+          `${process.env.UPLOAD_SERVICE}/upload`,
+          {
+            buffer: fileBuffer.content,
+            public_id: oldPublicId,
+          },
+        )
+        .catch((error: any) => {
+          console.error("Error uploading file:", error && JSON.stringify(error, null, 2));
+          throw new Error("File upload failed");
+        });
+
+      const [updatedUser] = await sql`
+        UPDATE users
+        SET profile_picture = ${uploadResult.url}, 
+            profile_picture_public_id = ${uploadResult.public_id}
+        WHERE user_id = ${user.user_id}
+        RETURNING user_id, name, email, phone_number, bio, profile_picture, profile_picture_public_id;
+      `;
+
+      res.json({
+        message: "Profile picture updated successfully",
+        updatedUser,
+      });
+    } catch (error: any) {
+      console.error("Error updating profile picture:", error);
+      return res.status(500).json({ error: error.message || "Failed to update profile picture" });
+    }
   }
 );
