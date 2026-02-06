@@ -6,7 +6,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import Link from "next/link";
 import { useState, useEffect } from "react";
 import { User, LogOut, Briefcase, Menu, X, Sparkles, ChevronDown } from "lucide-react";
-import { ModeToggle } from "./toggle-mode";
+
 import { motion, AnimatePresence } from "framer-motion";
 
 const Navbar = () => {
@@ -46,7 +46,7 @@ const Navbar = () => {
       transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
       className={`fixed w-full z-50 top-0 transition-all duration-300 ${
         scrolled 
-          ? "bg-black/80 backdrop-blur-xl border-b border-white/10" 
+          ? "bg-gradient-to-br from-indigo-950/95 via-slate-900/95 to-purple-950/95 backdrop-blur-xl border-b border-white/10" 
           : "bg-transparent"
       }`}
     >
@@ -87,8 +87,8 @@ const Navbar = () => {
 
           {/* Right Section */}
           <div className="flex items-center gap-2">
-            {/* Theme Toggle */}
-            <ModeToggle />
+ 
+          
 
             {/* Auth Section */}
             {isAuth ? (
