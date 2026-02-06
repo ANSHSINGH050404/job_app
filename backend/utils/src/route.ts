@@ -1,4 +1,4 @@
-import express, { raw } from "express";
+import express from "express";
 import { v2 as cloudinary } from "cloudinary";
 const router = express.Router();
 
@@ -45,14 +45,13 @@ router.post("/upload", async (req, res) => {
 import { GoogleGenAI } from "@google/genai";
 
 import dotenv from "dotenv";
-import { json } from "node:stream/consumers";
 dotenv.config();
 
 const ai = new GoogleGenAI({
   apiKey: process.env.GOOGLE_API_KEY,
 });
 
-router.post("/carrer", async (req, res) => {
+router.post("/career", async (req, res) => {
   try {
     const { skills } = req.body;
 
@@ -115,7 +114,7 @@ Mastery', 'DevOps & Cloud').",
 
       jsonResponse = JSON.parse(rawText);
     } catch (error: any) {
-      res.status(500).json({
+      return res.status(500).json({
         message: "AI did not return valid JSON",
         rawResponse: response.text,
       });
@@ -128,6 +127,10 @@ Mastery', 'DevOps & Cloud').",
 
 router.post("/resume-analyzer", async (req, res) => {
   try {
+    if (!req.body) {
+      return res.status(400).json({ error: "Request body is required" });
+    }
+
     const { pdfBase64 } = req.body;
 
     if (!pdfBase64) {
@@ -213,18 +216,18 @@ Focus on:
     let jsonResponse: any;
 
     try {
-      const rewText: any = response.text
+      const rawText: any = response.text
         ?.replace(/```json/g, "")
         .replace(/```/g, "")
         .trim();
 
-      if (!raw) {
+      if (!rawText) {
         throw new Error("AI did not return valid JSON");
       }
 
-      jsonResponse = JSON.parse(rewText);
+      jsonResponse = JSON.parse(rawText);
     } catch (error: any) {
-      res.status(500).json({
+      return res.status(500).json({
         message: "AI did not return valid JSON",
         rawResponse: response.text,
       });
