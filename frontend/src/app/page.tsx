@@ -1,9 +1,11 @@
+import Hero from "@/screens/Hero";
 
 
 export default function Home() {
   return (
-    <nav>
-      <h1>Home</h1>
-    </nav>
+   <div>
+    {/* <Hero/> */}
+    <h1>Hero</h1>
+   </div>
   );
 }
