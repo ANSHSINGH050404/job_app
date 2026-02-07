@@ -1,6 +1,6 @@
 'use client'
 
-import { CarrerGuideResponse, utils_services } from '@/type'
+import { CarrerGuideResponse } from '@/type'
 import axios from 'axios'
 import { motion } from 'framer-motion'
 import { Sparkle, X, Rocket } from 'lucide-react'
@@ -14,7 +14,7 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
-
+import {utils_services} from '@/context/AppContext'
 const CarrerGuid = () => {
   const [open, setOpen] = useState(false)
   const [skills, setSkills] = useState<string[]>([])
