@@ -66,7 +66,7 @@ const Navbar = () => {
                 <div className="absolute -inset-1 bg-gradient-to-r from-blue-500 to-purple-500 rounded-lg blur opacity-40" />
               </div>
               <span className="text-xl font-bold bg-gradient-to-r from-white via-blue-200 to-white bg-clip-text text-transparent">
-                FreshHire
+                PathForge
               </span>
             </Link>
           </motion.div>

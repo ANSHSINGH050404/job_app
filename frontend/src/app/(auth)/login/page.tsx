@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState,useEffect } from 'react'
 import { auth_services, useAppData } from '@/context/AppContext'
 import { redirect, useRouter } from 'next/navigation'
 import axios from 'axios'
@@ -19,9 +19,11 @@ const LoginPage = () => {
   const { isAuth, setIsAuth, setUser, loading, setLoading } = useAppData()
   const router = useRouter()
 
+  useEffect(() => {
   if (isAuth) {
-    redirect('/')
+    router.push('/')
   }
+}, [isAuth, router])
 
   const loginHandler = async (e: React.FormEvent) => {
     e.preventDefault()
