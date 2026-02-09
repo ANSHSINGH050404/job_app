@@ -23,7 +23,7 @@ const LoginPage = () => {
   if (isAuth) {
     router.push('/')
   }
-}, [isAuth, router])
+}, [])
 
   const loginHandler = async (e: React.FormEvent) => {
     e.preventDefault()

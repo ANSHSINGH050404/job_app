@@ -4,7 +4,7 @@ import helmet from "helmet";
 import morgan from "morgan";
 import authRouter from "./routes/auth";
 import { connectKafka } from "./producer";
-
+import { limiter } from "./middleware/ratelimiter";
 const app = express();
 
 // Security Middleware
@@ -19,7 +19,7 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 connectKafka();
 
 // Routes
-app.use("/api/auth", authRouter);
+app.use("/api/auth",limiter, authRouter);
 
 
 export default app;
